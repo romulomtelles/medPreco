@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MedPreço — Comparador de Remédios</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #f0f4f8;
+      color: #1a202c;
+      min-height: 100vh;
+    }
+
+    /* ===== HEADER ===== */
+    header {
+      background: linear-gradient(135deg, #1a6b3c 0%, #22a85a 100%);
+      color: white;
+      padding: 2rem 1rem 3.2rem;
+      text-align: center;
+    }
+    header h1 { font-size: 2.2rem; font-weight: 800; letter-spacing: -0.5px; }
+    header p  { margin-top: .5rem; opacity: .85; font-size: 1rem; }
+
+    /* pharmacy logo grid */
+    .pharmacies-grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: .55rem;
+      margin-top: 1.3rem;
+      max-width: 780px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .ph-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,.18);
+      border: 1px solid rgba(255,255,255,.3);
+      color: white;
+      border-radius: 999px;
+      padding: .28rem .85rem;
+      font-size: .78rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .ph-chip img {
+      width: 16px;
+      height: 16px;
+      border-radius: 3px;
+      object-fit: contain;
+      background: white;
+    }
+    .ph-chip .ph-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* ===== SEARCH WRAP ===== */
+    .search-wrap {
+      max-width: 680px;
+      margin: -1.6rem auto 0;
+      padding: 0 1rem;
+      position: relative;
+      z-index: 10;
+    }
+    .search-box {
+      display: flex;
+      background: white;
+      border-radius: 14px;
+      box-shadow: 0 8px 30px rgba(0,0,0,.15);
+      overflow: hidden;
+    }
+    .search-box input {
+      flex: 1;
+      border: none;
+      outline: none;
+      padding: 1rem 1.2rem;
+      font-size: 1.05rem;
+      color: #1a202c;
+    }
+    .search-box button {
+      background: #22a85a;
+      color: white;
+      border: none;
+      padding: 0 1.6rem;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .2s;
+      white-space: nowrap;
+    }
+    .search-box button:hover { background: #1a8a4a; }
+
+    /* ===== STATE FILTER ===== */
+    .filter-bar {
+      max-width: 680px;
+      margin: 1rem auto 0;
+      padding: 0 1rem;
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      flex-wrap: wrap;
+    }
+    .filter-label {
+      font-size: .82rem;
+      font-weight: 700;
+      color: #475569;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      white-space: nowrap;
+    }
+    .state-btn {
+      background: white;
+      border: 2px solid #cbd5e1;
+      color: #475569;
+      border-radius: 999px;
+      padding: .3rem .9rem;
+      font-size: .82rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all .15s;
+      white-space: nowrap;
+    }
+    .state-btn:hover { border-color: #22a85a; color: #22a85a; }
+    .state-btn.active {
+      background: #22a85a;
+      border-color: #22a85a;
+      color: white;
+    }
+
+    /* ===== CONTAINER ===== */
+    .container {
+      max-width: 960px;
+      margin: 2.5rem auto;
+      padding: 0 1rem;
+    }
+
+    /* ===== LOADING ===== */
+    .spinner {
+      border: 4px solid #e2e8f0;
+      border-top-color: #22a85a;
+      border-radius: 50%;
+      width: 2.5rem; height: 2.5rem;
+      animation: spin .8s linear infinite;
+      margin: 2rem auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #status-msg { text-align: center; color: #64748b; font-size: .9rem; margin-top: .5rem; }
+
+    /* ===== PODIUM ===== */
+    .podium {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .podium-card {
+      background: white;
+      border-radius: 16px;
+      padding: 1.4rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,.08);
+      border-top: 4px solid #22a85a;
+      position: relative;
+      transition: transform .2s, box-shadow .2s;
+    }
+    .podium-card:hover { transform: translateY(-3px); box-shadow: 0 8px 28px rgba(0,0,0,.12); }
+    .podium-card.rank-1 { border-top-color: #f59e0b; }
+    .podium-card.rank-2 { border-top-color: #94a3b8; }
+    .podium-card.rank-3 { border-top-color: #cd7f32; }
+
+    .rank-label {
+      position: absolute; top: -1px; right: 1rem;
+      background: #f59e0b; color: white;
+      font-size: .7rem; font-weight: 800;
+      padding: .2rem .6rem;
+      border-radius: 0 0 8px 8px;
+      text-transform: uppercase;
+    }
+    .rank-1 .rank-label { background: #f59e0b; }
+    .rank-2 .rank-label { background: #94a3b8; }
+    .rank-3 .rank-label { background: #cd7f32; }
+
+    .pharmacy-logo-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: .5rem;
+    }
+    .pharmacy-logo-wrap img {
+      width: 28px; height: 28px;
+      border-radius: 6px;
+      object-fit: contain;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      padding: 2px;
+    }
+    .pharmacy-name { font-size: .82rem; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
+    .product-name  { font-size: .95rem; font-weight: 600; margin: .4rem 0 .6rem; line-height: 1.3; color: #2d3748; }
+    .price         { font-size: 1.6rem; font-weight: 800; color: #1a6b3c; }
+
+    .buy-btn {
+      display: block; margin-top: .9rem;
+      background: #22a85a; color: white;
+      text-align: center; padding: .65rem 1rem;
+      border-radius: 10px; text-decoration: none;
+      font-weight: 700; font-size: .95rem;
+      transition: background .2s;
+    }
+    .buy-btn:hover { background: #1a8a4a; }
+
+    /* ===== RESULT LIST ===== */
+    .section-title {
+      font-size: 1rem; font-weight: 700; color: #64748b;
+      text-transform: uppercase; letter-spacing: .5px;
+      margin-bottom: 1rem; padding-bottom: .5rem;
+      border-bottom: 2px solid #e2e8f0;
+    }
+    .result-list { display: flex; flex-direction: column; gap: .7rem; }
+    .result-row {
+      background: white; border-radius: 12px;
+      padding: 1rem 1.2rem;
+      display: flex; align-items: center; gap: 1rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,.06);
+      transition: transform .15s;
+    }
+    .result-row:hover { transform: translateX(4px); }
+    .result-rank { font-size: .85rem; font-weight: 800; color: #94a3b8; width: 2rem; text-align: center; flex-shrink: 0; }
+    .result-logo { width: 24px; height: 24px; border-radius: 5px; object-fit: contain; background: #f8fafc; border: 1px solid #e2e8f0; padding: 2px; flex-shrink: 0; }
+    .result-info { flex: 1; min-width: 0; }
+    .result-pharmacy { font-size: .75rem; color: #64748b; font-weight: 600; text-transform: uppercase; }
+    .result-name { font-size: .9rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .result-price { font-size: 1.2rem; font-weight: 800; color: #1a6b3c; flex-shrink: 0; }
+    .result-link {
+      background: #f0fdf4; color: #1a6b3c;
+      border: 1.5px solid #22a85a; border-radius: 8px;
+      padding: .45rem .9rem; font-size: .82rem; font-weight: 700;
+      text-decoration: none; white-space: nowrap;
+      transition: background .2s; flex-shrink: 0;
+    }
+    .result-link:hover { background: #dcfce7; }
+
+    /* ===== EMPTY / ERROR ===== */
+    .empty, .error { text-align: center; padding: 3rem 1rem; color: #64748b; }
+    .empty-icon, .error-icon { font-size: 3rem; margin-bottom: .8rem; }
+    .error { color: #e53e3e; }
+
+    /* filtered-out row */
+    .result-row.hidden, .podium-card.hidden { display: none; }
+
+    /* no-results-after-filter */
+    #filter-empty { display: none; text-align: center; padding: 2rem; color: #64748b; }
+
+    /* ===== PRODUCT FILTER / SORT BAR ===== */
+    .filter-bar + .filter-bar { margin-top: .45rem; }
+
+    /* badges on result rows */
+    .badge {
+      display: inline-block;
+      font-size: .65rem; font-weight: 700;
+      padding: .15rem .45rem;
+      border-radius: 999px;
+      white-space: nowrap;
+      vertical-align: middle;
+      margin-left: 4px;
+    }
+    .badge-generic  { background: #d1fae5; color: #065f46; }
+    .badge-brand    { background: #f1f5f9; color: #475569; }
+    .badge-qty      { background: #ede9fe; color: #5b21b6; }
+    .price-per-unit { font-size: .72rem; color: #94a3b8; margin-top: 2px; }
+
+    /* active sort button gets green like state-btn */
+    .sort-btn { /* same as state-btn but orange accent */
+      background: white;
+      border: 2px solid #cbd5e1;
+      color: #475569;
+      border-radius: 999px;
+      padding: .3rem .9rem;
+      font-size: .82rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all .15s;
+      white-space: nowrap;
+    }
+    .sort-btn:hover  { border-color: #f59e0b; color: #b45309; }
+    .sort-btn.active { background: #f59e0b; border-color: #f59e0b; color: white; }
+
+    .brand-btn {
+      background: white;
+      border: 2px solid #cbd5e1;
+      color: #475569;
+      border-radius: 999px;
+      padding: .28rem .75rem;
+      font-size: .78rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .15s;
+      white-space: nowrap;
+    }
+    .brand-btn:hover  { border-color: #8b5cf6; color: #6d28d9; }
+    .brand-btn.active { background: #8b5cf6; border-color: #8b5cf6; color: white; }
+
+    @media (max-width: 520px) {
+      header h1 { font-size: 1.6rem; }
+      .price { font-size: 1.3rem; }
+      .result-name { font-size: .82rem; }
+      .result-link { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>💊 MedPreço</h1>
+  <p>Compare preços de remédios nas maiores farmácias do Brasil</p>
+
+  <div class="pharmacies-grid">
+    <!-- national -->
+    <span class="ph-chip">
+      <img src="https://www.google.com/s2/favicons?domain=ultrafarma.com.br&sz=32" alt="" onerror="this.style.display='none'">
+      Ultrafarma
+    </span>
+    <span class="ph-chip">
+      <img src="https://www.google.com/s2/favicons?domain=drogasil.com.br&sz=32" alt="" onerror="this.style.display='none'">
+      Drogasil
+    </span>
+    <span class="ph-chip">
+      <img src="https://www.google.com/s2/favicons?domain=drogaraia.com.br&sz=32" alt="" onerror="this.style.display='none'">
+      Droga Raia
+    </span>
+    <span class="ph-chip">
+      <img src="https://www.google.com/s2/favicons?domain=paguemenos.com.br&sz=32" alt="" onerror="this.style.display='none'">
+      Pague Menos
+    </span>
+    <span class="ph-chip">
+      <img src="https://www.google.com/s2/favicons?domain=drogariasaopaulo.com.br&sz=32" alt="" onerror="this.style.display='none'">
+      Drogaria SP
+    </span>
+    <span class="ph-chip">
+      <img src="https://www.google.com/s2/favicons?domain=farmaciaindiana.com.br&sz=32" alt="" onerror="this.style.display='none'">
+      Farmácia Indiana
+    </span>
+    <!-- regional -->
+    <span class="ph-chip">
+      <img src="https://www.google.com/s2/favicons?domain=drogariaglobo.com.br&sz=32" alt="" onerror="this.style.display='none'">
+      Drogaria Globo <small style="opacity:.7">(RJ)</small>
+    </span>
+    <span class="ph-chip">
+      <img src="https://www.google.com/s2/favicons?domain=panvel.com&sz=32" alt="" onerror="this.style.display='none'">
+      Panvel <small style="opacity:.7">(Sul)</small>
+    </span>
+    <span class="ph-chip">
+      <img src="https://www.google.com/s2/favicons?domain=saojoaofarmacias.com.br&sz=32" alt="" onerror="this.style.display='none'">
+      Farmácia São João <small style="opacity:.7">(RS)</small>
+    </span>
+  </div>
+</header>
+
+<!-- Search -->
+<div class="search-wrap">
+  <form class="search-box" onsubmit="doSearch(event)">
+    <input
+      id="search-input"
+      type="text"
+      placeholder="Ex: Rivotril, Dipirona, Amoxicilina 500mg..."
+      autocomplete="off"
+      autofocus
+    />
+    <button type="submit">Buscar Preço</button>
+  </form>
+</div>
+
+<!-- State filter -->
+<div class="filter-bar">
+  <span class="filter-label">Estado:</span>
+  <button class="state-btn active" data-state="all"  onclick="setFilter('all')">Todos</button>
+  <button class="state-btn"        data-state="SP"   onclick="setFilter('SP')">SP — São Paulo</button>
+  <button class="state-btn"        data-state="RJ"   onclick="setFilter('RJ')">RJ — Rio de Janeiro</button>
+  <button class="state-btn"        data-state="MG"   onclick="setFilter('MG')">MG — Minas Gerais</button>
+  <button class="state-btn"        data-state="RS"   onclick="setFilter('RS')">RS — Rio Grande do Sul</button>
+</div>
+
+<!-- Product type + sort (shown after first search) -->
+<div class="filter-bar" id="type-sort-bar" style="display:none">
+  <span class="filter-label">Tipo:</span>
+  <button class="state-btn active" data-generic="all"     onclick="setGenericFilter('all')">Todos</button>
+  <button class="state-btn"        data-generic="generic" onclick="setGenericFilter('generic')">Genérico</button>
+  <button class="state-btn"        data-generic="branded" onclick="setGenericFilter('branded')">Referência/Similar</button>
+  <span class="filter-label" style="margin-left:.6rem">Ordenar:</span>
+  <button class="sort-btn active" data-sort="price" onclick="setSort('price')">Menor Preço Total</button>
+  <button class="sort-btn"        data-sort="unit"  onclick="setSort('unit')">Menor Preço/Unidade</button>
+  <button class="sort-btn"        data-sort="qty"   onclick="setSort('qty')">Qtd. Unidades ↓</button>
+</div>
+
+<!-- Brand/lab filter (dynamic, shown after first search) -->
+<div class="filter-bar" id="brand-bar" style="display:none">
+  <span class="filter-label">Laboratório:</span>
+  <div id="brand-buttons" style="display:flex;flex-wrap:wrap;gap:.45rem"></div>
+</div>
+
+<div class="container" id="results"></div>
+
+<script>
+  // ── pharmacy logo map ────────────────────────────────────────────────────
+  const PH_FAVICONS = {
+    'Ultrafarma':         'https://www.google.com/s2/favicons?domain=ultrafarma.com.br&sz=32',
+    'Drogasil':           'https://www.google.com/s2/favicons?domain=drogasil.com.br&sz=32',
+    'Droga Raia':         'https://www.google.com/s2/favicons?domain=drogaraia.com.br&sz=32',
+    'Pague Menos':        'https://www.google.com/s2/favicons?domain=paguemenos.com.br&sz=32',
+    'Drogaria São Paulo': 'https://www.google.com/s2/favicons?domain=drogariasaopaulo.com.br&sz=32',
+    'Farmácia Indiana':   'https://www.google.com/s2/favicons?domain=farmaciaindiana.com.br&sz=32',
+    'Drogaria Globo':     'https://www.google.com/s2/favicons?domain=drogariaglobo.com.br&sz=32',
+    'Panvel':             'https://www.google.com/s2/favicons?domain=panvel.com&sz=32',
+    'Farmácia São João':  'https://www.google.com/s2/favicons?domain=saojoaofarmacias.com.br&sz=32',
+  };
+
+  // ── filter + sort state ──────────────────────────────────────────────────
+  let currentFilter        = 'all';   // state filter
+  let currentGenericFilter = 'all';   // 'all' | 'generic' | 'branded'
+  let currentSort          = 'price'; // 'price' | 'unit' | 'qty'
+  let currentBrand         = null;    // null = all brands
+  let lastData             = null;
+
+  // ── state filter ─────────────────────────────────────────────────────────
+  function setFilter(state) {
+    currentFilter = state;
+    document.querySelectorAll('.state-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.state === state)
+    );
+    if (lastData) applyFilter();
+  }
+
+  // ── generic/branded filter ───────────────────────────────────────────────
+  function setGenericFilter(val) {
+    currentGenericFilter = val;
+    document.querySelectorAll('[data-generic]').forEach(b =>
+      b.classList.toggle('active', b.dataset.generic === val)
+    );
+    if (lastData) applyFilter();
+  }
+
+  // ── sort ─────────────────────────────────────────────────────────────────
+  function setSort(val) {
+    currentSort = val;
+    document.querySelectorAll('.sort-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.sort === val)
+    );
+    if (lastData) applyFilter();
+  }
+
+  // ── brand filter ─────────────────────────────────────────────────────────
+  function setBrand(brand) {
+    currentBrand = (currentBrand === brand) ? null : brand; // toggle
+    document.querySelectorAll('.brand-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.brand === currentBrand)
+    );
+    if (lastData) applyFilter();
+  }
+
+  function buildBrandFilters(results) {
+    const brands = [...new Set(
+      results.map(r => r.brand).filter(b => b && b.trim())
+    )].sort();
+
+    const bar = document.getElementById('brand-bar');
+    const btns = document.getElementById('brand-buttons');
+    if (brands.length === 0) { bar.style.display = 'none'; return; }
+
+    btns.innerHTML =
+      `<button class="brand-btn${currentBrand === null ? ' active' : ''}" data-brand="__all__" onclick="setBrand(null)">Todos</button>` +
+      brands.map(b =>
+        `<button class="brand-btn${currentBrand === b ? ' active' : ''}" data-brand="${escHtml(b)}" onclick="setBrand('${escHtml(b)}')">${escHtml(b)}</button>`
+      ).join('');
+    bar.style.display = 'flex';
+  }
+
+  // ── combined filter + sort ────────────────────────────────────────────────
+  function applyFilter() {
+    if (!lastData) return;
+
+    let items = lastData.results.filter(item => {
+      // state
+      if (currentFilter !== 'all') {
+        if (item.states !== null && item.states !== undefined && !item.states.includes(currentFilter))
+          return false;
+      }
+      // generic
+      if (currentGenericFilter === 'generic'  && !item.is_generic) return false;
+      if (currentGenericFilter === 'branded'  &&  item.is_generic) return false;
+      // brand
+      if (currentBrand !== null && item.brand !== currentBrand) return false;
+      return true;
+    });
+
+    // sort
+    if (currentSort === 'unit') {
+      items = [...items].sort((a, b) => {
+        const au = a.price_per_unit || a.price;
+        const bu = b.price_per_unit || b.price;
+        return au - bu;
+      });
+    } else if (currentSort === 'qty') {
+      items = [...items].sort((a, b) => (b.qty || 1) - (a.qty || 1));
+    }
+    // else 'price': already sorted by backend
+
+    if (items.length === 0) {
+      renderNoFilterResults();
+      return;
+    }
+
+    const top3 = items.slice(0, 3);
+    const rest  = items.slice(3);
+    renderResults({ ...lastData, results: items, top3, rest }, lastData.query);
+  }
+
+  function renderNoFilterResults() {
+    const stateNames = { SP: 'São Paulo', RJ: 'Rio de Janeiro', MG: 'Minas Gerais', RS: 'Rio Grande do Sul' };
+    document.getElementById('results').innerHTML = `
+      <div class="empty">
+        <div class="empty-icon">🗺️</div>
+        <p>Nenhum resultado encontrado com os filtros atuais.</p>
+        <p style="margin-top:.5rem;font-size:.85rem">Tente ajustar o estado, tipo ou laboratório.</p>
+      </div>`;
+  }
+
+  // ── search ────────────────────────────────────────────────────────────────
+  async function doSearch(e) {
+    if (e) e.preventDefault();
+    const q = document.getElementById('search-input').value.trim();
+    if (!q) return;
+
+    // reset product filters on new search
+    currentGenericFilter = 'all';
+    currentBrand = null;
+    currentSort = 'price';
+    document.querySelectorAll('[data-generic]').forEach(b => b.classList.toggle('active', b.dataset.generic === 'all'));
+    document.querySelectorAll('.sort-btn').forEach(b => b.classList.toggle('active', b.dataset.sort === 'price'));
+    document.getElementById('type-sort-bar').style.display = 'none';
+    document.getElementById('brand-bar').style.display = 'none';
+
+    const el = document.getElementById('results');
+    el.innerHTML = `
+      <div class="spinner"></div>
+      <p id="status-msg">Consultando farmácias... aguarde</p>
+    `;
+
+    const msgs = [
+      'Consultando Ultrafarma...', 'Consultando Drogasil...',
+      'Consultando Droga Raia...', 'Consultando Pague Menos...',
+      'Consultando Panvel...', 'Consultando Farmácia São João...',
+      'Calculando melhores preços...',
+    ];
+    let mi = 0;
+    const interval = setInterval(() => {
+      const sm = document.getElementById('status-msg');
+      if (sm && mi < msgs.length) sm.textContent = msgs[mi++];
+    }, 1100);
+
+    try {
+      const res  = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+      clearInterval(interval);
+      const data = await res.json();
+
+      if (!res.ok) {
+        el.innerHTML = `<div class="error"><div class="error-icon">⚠️</div><p>${data.detail || 'Erro na busca.'}</p></div>`;
+        return;
+      }
+
+      if (!data.results || data.results.length === 0) {
+        el.innerHTML = `
+          <div class="empty">
+            <div class="empty-icon">🔍</div>
+            <p>Nenhum resultado para <strong>"${escHtml(q)}"</strong>.</p>
+            <p style="margin-top:.5rem;font-size:.85rem">Tente um nome diferente ou verifique a grafia.</p>
+          </div>`;
+        return;
+      }
+
+      lastData = data;
+      document.getElementById('type-sort-bar').style.display = 'flex';
+      buildBrandFilters(data.results);
+      applyFilter();
+
+    } catch (err) {
+      clearInterval(interval);
+      el.innerHTML = `<div class="error"><div class="error-icon">⚠️</div><p>Erro de conexão. Verifique o servidor.</p></div>`;
+    }
+  }
+
+  // ── helpers ───────────────────────────────────────────────────────────────
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function pharmacyLogo(pharmacy, size) {
+    const src = PH_FAVICONS[pharmacy] || `https://www.google.com/s2/favicons?domain=google.com&sz=32`;
+    return `<img src="${src}" alt="${escHtml(pharmacy)}" width="${size}" height="${size}" style="width:${size}px;height:${size}px" onerror="this.style.display='none'">`;
+  }
+
+  function stateTag(item) {
+    if (!item.states) return '<span style="font-size:.7rem;color:#94a3b8;margin-left:4px">Nacional</span>';
+    return `<span style="font-size:.7rem;color:#94a3b8;margin-left:4px">${item.states.join(', ')}</span>`;
+  }
+
+  function itemBadges(item) {
+    let html = '';
+    if (item.is_generic)
+      html += `<span class="badge badge-generic">Genérico</span>`;
+    if (item.qty && item.qty > 1)
+      html += `<span class="badge badge-qty">${item.qty} un.</span>`;
+    if (item.brand)
+      html += `<span class="badge badge-brand">${escHtml(item.brand)}</span>`;
+    return html;
+  }
+
+  function pricePerUnitStr(item) {
+    const qty = item.qty || 1;
+    if (qty <= 1 || !item.price_per_unit) return '';
+    const ppu = item.price_per_unit.toFixed(2).replace('.', ',');
+    return `<div class="price-per-unit">R$&nbsp;${ppu}/unidade</div>`;
+  }
+
+  const rankLabels = ['🥇 Melhor Preço', '🥈 2ª Opção', '🥉 3ª Opção'];
+  const rankClass  = ['rank-1', 'rank-2', 'rank-3'];
+
+  function renderResults(data, q) {
+    const el = document.getElementById('results');
+    const filterParts = [];
+    if (currentFilter !== 'all') filterParts.push(currentFilter);
+    if (currentGenericFilter !== 'all') filterParts.push(currentGenericFilter === 'generic' ? 'Genérico' : 'Referência/Similar');
+    if (currentBrand) filterParts.push(currentBrand);
+    const sortLabel = currentSort === 'unit' ? 'preço/un.' : currentSort === 'qty' ? 'qtd. unidades' : 'menor preço';
+    const filterNote = filterParts.length
+      ? ` <span style="color:#22a85a;font-weight:700">· ${filterParts.join(' · ')}</span>`
+      : '';
+
+    let html = `<p style="color:#64748b;margin-bottom:1.5rem;font-size:.9rem">
+      ${data.results.length} resultado(s) para <strong>"${escHtml(q)}"</strong>${filterNote}
+      <span style="color:#94a3b8"> · por ${sortLabel}</span>
+    </p>`;
+
+    // TOP 3 podium
+    html += `<div class="podium">`;
+    data.top3.forEach((item, i) => {
+      html += `
+        <div class="podium-card ${rankClass[i]}">
+          <div class="rank-label">${rankLabels[i]}</div>
+          <div class="pharmacy-logo-wrap">
+            ${pharmacyLogo(item.pharmacy, 28)}
+            <div>
+              <div class="pharmacy-name">${escHtml(item.pharmacy)}</div>
+              ${stateTag(item)}
+            </div>
+          </div>
+          <div class="product-name">${escHtml(item.name)}</div>
+          <div style="margin:.35rem 0">${itemBadges(item)}</div>
+          <div class="price">${escHtml(item.price_str)}</div>
+          ${pricePerUnitStr(item)}
+          <a class="buy-btn" href="${escHtml(item.url)}" target="_blank" rel="noopener noreferrer">
+            Comprar agora ↗
+          </a>
+        </div>`;
+    });
+    html += `</div>`;
+
+    // Remaining results
+    if (data.rest && data.rest.length > 0) {
+      html += `<div class="section-title">Outras opções</div>`;
+      html += `<div class="result-list">`;
+      data.rest.forEach((item, i) => {
+        const rank = i + 4;
+        html += `
+          <div class="result-row">
+            <div class="result-rank">#${rank}</div>
+            ${pharmacyLogo(item.pharmacy, 24)}
+            <div class="result-info">
+              <div class="result-pharmacy">${escHtml(item.pharmacy)}${stateTag(item)}</div>
+              <div class="result-name" title="${escHtml(item.name)}">${escHtml(item.name)} ${itemBadges(item)}</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <div class="result-price">${escHtml(item.price_str)}</div>
+              ${pricePerUnitStr(item)}
+            </div>
+            <a class="result-link" href="${escHtml(item.url)}" target="_blank" rel="noopener noreferrer">Ver ↗</a>
+          </div>`;
+      });
+      html += `</div>`;
+    }
+
+    el.innerHTML = html;
+  }
+
+  // Enter key
+  document.getElementById('search-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doSearch(null);
+  });
+</script>
+
+</body>
+</html>
